@@ -149,6 +149,7 @@ To decrypt, use the INVERSE (opposite) of the last 3 rules, and the 1st as-is (d
 
 
 ## PROGRAM:
+
 ```
 #include <stdio.h>
 #include <stdlib.h>
@@ -273,6 +274,26 @@ void encrypt(char str[], char keyT[5][5], int ps) {
     }
 }
 
+// Function for performing the decryption
+void decrypt(char str[], char keyT[5][5], int ps) {
+    int i, a[4];
+
+    for (i = 0; i < ps; i += 2) {
+        search(keyT, str[i], str[i + 1], a);
+        
+        if (a[0] == a[2]) {  // Same row
+            str[i] = keyT[a[0]][mod5(a[1] - 1 + 5)];
+            str[i + 1] = keyT[a[0]][mod5(a[3] - 1 + 5)];
+        } else if (a[1] == a[3]) {  // Same column
+            str[i] = keyT[mod5(a[0] - 1 + 5)][a[1]];
+            str[i + 1] = keyT[mod5(a[2] - 1 + 5)][a[1]];
+        } else {  // Rectangle swap
+            str[i] = keyT[a[0]][a[3]];
+            str[i + 1] = keyT[a[2]][a[1]];
+        }
+    }
+}
+
 // Function to encrypt using Playfair Cipher
 void encryptByPlayfairCipher(char str[], char key[]) {
     int ps, ks;
@@ -296,11 +317,34 @@ void encryptByPlayfairCipher(char str[], char key[]) {
     encrypt(str, keyT, ps);
 }
 
+// Function to decrypt using Playfair Cipher
+void decryptByPlayfairCipher(char str[], char key[]) {
+    int ps, ks;
+    char keyT[5][5];
+
+    // Key
+    ks = strlen(key);
+    ks = removeSpaces(key, ks);
+    toLowerCase(key, ks);
+
+    // Ciphertext
+    ps = strlen(str);
+    toLowerCase(str, ps);
+    ps = removeSpaces(str, ps);
+    ps = prepare(str, ps);
+
+    // Generate key square
+    generateKeyTable(key, ks, keyT);
+
+    // Decrypt the ciphertext
+    decrypt(str, keyT, ps);
+}
+
 // Driver code
 int main() {
     char str[SIZE], key[SIZE];
 
-    // Key to be encrypted
+    // Key to be used
     strcpy(key, "SAVEETHA");
     printf("Key text: %s\n", key);
 
@@ -312,14 +356,19 @@ int main() {
     encryptByPlayfairCipher(str, key);
     printf("Cipher text: %s\n", str);
 
+    // Decrypt using Playfair Cipher
+    decryptByPlayfairCipher(str, key);
+    printf("Decrypted text: %s\n", str);
+
     return 0;
 }
 
-```
 
+```
 ## OUTPUT:
 
-![Screenshot 2024-09-02 102445](https://github.com/user-attachments/assets/426fb2f6-2b16-401b-b74b-74e694351523)
+![Screenshot 2024-09-02 111926](https://github.com/user-attachments/assets/b4b54559-c8c2-4d04-8125-fc418ebbfb18)
+
 
 
 ## RESULT:
@@ -610,19 +659,39 @@ In the rail fence cipher, the plaintext is written downwards and diagonally on s
 #include <string.h>
 #include <stdlib.h>
 
+void encrypt(char str[], int rails);
+void decrypt(char str[], int rails);
+
 int main() {
-    int i, j, len, rails, count;
+    int choice, rails;
     char str[1000];
-    int code[100][1000]; 
 
     printf("Enter a Secret Message: ");
     fgets(str, sizeof(str), stdin);  
     str[strcspn(str, "\n")] = '\0'; 
 
-    len = strlen(str);
-
     printf("Enter number of rails: ");
     scanf("%d", &rails);
+
+    printf("Choose an option:\n1. Encrypt\n2. Decrypt\n");
+    scanf("%d", &choice);
+
+    if (choice == 1) {
+        encrypt(str, rails);
+    } else if (choice == 2) {
+        decrypt(str, rails);
+    } else {
+        printf("Invalid choice.\n");
+    }
+
+    return 0;
+}
+
+void encrypt(char str[], int rails) {
+    int i, j, len, count;
+    int code[100][1000]; 
+
+    len = strlen(str);
 
     for (i = 0; i < rails; i++) {
         for (j = 0; j < len; j++) {
@@ -648,7 +717,6 @@ int main() {
         count++;
     }
 
- 
     printf("\nEncrypted Message: ");
     for (i = 0; i < rails; i++) {
         for (j = 0; j < len; j++) {
@@ -658,8 +726,68 @@ int main() {
         }
     }
     printf("\n");
+}
 
-    return 0;
+void decrypt(char str[], int rails) {
+    int i, j, len, count;
+    int code[100][1000];
+    char decrypted[1000];
+
+    len = strlen(str);
+
+    for (i = 0; i < rails; i++) {
+        for (j = 0; j < len; j++) {
+            code[i][j] = 0;
+        }
+    }
+
+    count = 0;
+    j = 0;
+    int index = 0;
+
+    while (j < len) {
+        if (count % 2 == 0) {
+            for (i = 0; i < rails && j < len; i++) {
+                code[i][j] = 1; 
+                j++;
+            }
+        } else {
+            for (i = rails - 2; i > 0 && j < len; i--) {
+                code[i][j] = 1; 
+                j++;
+            }
+        }
+        count++;
+    }
+
+    for (i = 0; i < rails; i++) {
+        for (j = 0; j < len; j++) {
+            if (code[i][j] == 1) {
+                code[i][j] = (int)str[index++];
+            }
+        }
+    }
+
+    index = 0;
+    j = 0;
+
+    while (j < len) {
+        if (count % 2 == 0) {
+            for (i = 0; i < rails && j < len; i++) {
+                decrypted[j] = (char)code[i][j];
+                j++;
+            }
+        } else {
+            for (i = rails - 2; i > 0 && j < len; i--) {
+                decrypted[j] = (char)code[i][j];
+                j++;
+            }
+        }
+        count++;
+    }
+    decrypted[j] = '\0';
+
+    printf("\nDecrypted Message: %s\n", decrypted);
 }
 
 ```
@@ -667,7 +795,9 @@ int main() {
 ## OUTPUT:
 OUTPUT:
 
-![Screenshot 2024-09-02 102843](https://github.com/user-attachments/assets/7806643c-46d6-4ba9-9bd7-76bf1ec1b932)
+![Screenshot 2024-09-02 112108](https://github.com/user-attachments/assets/2ff11972-5275-4d27-ab24-f7545d047233)
+![Screenshot 2024-09-02 112220](https://github.com/user-attachments/assets/9eaa45eb-5df1-4d56-94f8-e541613c66df)
+
 
 
 ## RESULT:
